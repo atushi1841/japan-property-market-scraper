@@ -1,0 +1,10 @@
+{
+  "actorSpecification": 1,
+  "name": "japan-property-market-scraper",
+  "title": "Japan Property Market — 2-Site Cross Comparison (Used Condo)",
+  "version": "0.1",
+  "buildTag": "latest",
+  "dockerfile": "./Dockerfile",
+  "readme": "./README.md",
+  "input": "./INPUT_SCHEMA.json"
+}
