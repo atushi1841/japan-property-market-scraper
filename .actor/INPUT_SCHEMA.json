@@ -3,6 +3,20 @@
   "type": "object",
   "schemaVersion": 1,
   "properties": {
+    "statsMode": {
+      "title": "Stats Mode",
+      "type": "boolean",
+      "description": "Enable statistics collection instead of normal item output",
+      "default": false,
+      "editor": "checkbox"
+    },
+    "statsKeyword": {
+      "title": "Stats Keyword",
+      "type": "string",
+      "description": "Optional keyword to filter results by title (used in stats mode)",
+      "default": "",
+      "editor": "textfield"
+    },
     "ward": {
       "title": "Ward (東京23区)",
       "type": "string",

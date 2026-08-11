@@ -8,8 +8,10 @@ Japan Property Market — 中古マンション売買の2サイト横断比較�
 from __future__ import annotations
 
 import asyncio
+import datetime
 import json
 import sys
+import unicodedata
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -28,7 +30,12 @@ SOURCES = {
 }
 
 
+def _norm_key(text: str) -> str:
+    return unicodedata.normalize("NFC", text).casefold()
+
+
 async def run(actor_input: dict) -> list[dict]:
+    stats_mode = actor_input.get("statsMode", False)
     ward = str(actor_input.get("ward", "渋谷区")).strip()
     max_items = int(actor_input.get("maxItems", 100))
     max_pages = int(actor_input.get("maxPages", 2))
@@ -54,6 +61,61 @@ async def run(actor_input: dict) -> list[dict]:
                 results.extend(items)
             except Exception as e:
                 print(f"Source {name} error: {e}")
+
+    if stats_mode:
+        keyword = str(actor_input.get("statsKeyword") or "").strip()
+        filtered = []
+        for item in results:
+            if keyword and _norm_key(keyword) not in _norm_key(item.get("title", "")):
+                continue
+            try:
+                price = int(item.get("price"))
+            except (TypeError, ValueError):
+                continue
+            filtered.append((item, price))
+        count = len(filtered)
+        if count:
+            prices = [price for _, price in filtered]
+            price_min = min(prices)
+            price_max = max(prices)
+            price_avg = int(sum(prices) / count)
+            s = sorted(prices)
+            if count % 2:
+                price_median = s[count // 2]
+            else:
+                price_median = int((s[count // 2 - 1] + s[count // 2]) / 2)
+            sample_items = [
+                {
+                    "title": item.get("title"),
+                    "price": price,
+                    "detailUrl": item.get("detailUrl"),
+                    "shop": item.get("shop"),
+                }
+                for item, price in filtered[:3]
+            ]
+        else:
+            price_min = None
+            price_max = None
+            price_avg = None
+            price_median = None
+            sample_items = []
+        collected_at = datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
+        stats_result = {
+            "statsType": "japan-property-price",
+            "keyword": keyword,
+            "count": count,
+            "priceMin": price_min,
+            "priceMax": price_max,
+            "priceAvg": price_avg,
+            "priceMedian": price_median,
+            "sampleItems": sample_items,
+            "collectedAt": collected_at,
+        }
+        if Actor is not None:
+            await Actor.push_data(stats_result)
+        else:
+            print(json.dumps(stats_result, ensure_ascii=False))
+        return results
 
     if Actor is not None:
         for item in results:
